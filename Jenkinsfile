@@ -27,7 +27,7 @@ pipeline {
         stage('Test') {
             steps {
                 echo 'Checking index.html...'
-                sh 'grep -Fq "Hello World from Jenkins!" index.html'
+                sh 'grep -Fq "Hello World from DevOps!" index.html'
                 echo 'HTML test passed!'
             }
         }
