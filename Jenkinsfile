@@ -1,74 +1,86 @@
-
+		
 pipeline {
 
-    // Execute this pipeline on any available Jenkins agent
+    // Run on an available Jenkins agent
     agent any
 
     stages {
 
-        // Stage 1: Install testing dependencies
+        // Stage 1: Install project dependencies
         stage('Install Dependencies') {
             steps {
 
-                echo 'Installing testing dependencies...'
+                echo 'Installing project dependencies...'
 
                 sh 'npm ci'
 
-                echo 'Dependencies installed successfully!'
             }
         }
 
-        // Stage 2: Test HTML files
+        // Stage 2: Run unit tests
         stage('Unit Testing') {
             steps {
 
-                echo 'Testing HTML page existence and structure...'
+                echo 'Running unit tests...'
 
                 sh 'npm run test:unit'
 
-                echo 'Unit tests completed successfully!'
             }
         }
 
-        // Stage 3: Test HTTP accessibility
+        // Stage 3: Run integration tests
         stage('Integration Testing') {
             steps {
 
-                echo 'Testing HTML pages through HTTP server...'
+                echo 'Running integration tests...'
 
                 sh 'npm run test:integration'
 
-                echo 'Integration tests completed successfully!'
             }
         }
 
-        // Stage 4: Build Docker image
-        stage('Build') {
+        // Stage 4: Static Application Security Testing
+        stage('SAST Security Scan') {
             steps {
 
-                echo 'Starting DevOps application build...'
+                echo 'Scanning source code for security vulnerabilities...'
 
-                sh 'docker --version'
+                sh '''
+                docker run --rm \
+                -v "$WORKSPACE:/src" \
+                semgrep/semgrep \
+                semgrep scan --config p/security-audit --error /src
+                '''
 
-                sh 'docker build -t devops-app:1.0 .'
-
-                echo 'Docker image build completed!'
             }
         }
+
+        // Stage 5: Testing and security summary
+        stage('Pipeline Summary') {
+            steps {
+
+                echo 'Unit tests, integration tests and SAST completed successfully!'
+
+            }
+        }
+
     }
 
     post {
 
         success {
-            echo 'SUCCESS: All HTML tests passed and Docker image built.'
+            echo 'SUCCESS: All tests and security scans passed!'
         }
 
         failure {
-            echo 'FAILURE: Check the Jenkins Console Output.'
+            echo 'FAILURE: Tests or security scanning detected a problem!'
         }
 
         always {
-            echo 'Jenkins pipeline execution finished.'
+            echo 'Jenkins pipeline execution completed.'
         }
+
     }
+
 }
+
