@@ -1,86 +1,71 @@
-		
+
 pipeline {
 
-    // Run on an available Jenkins agent
+    // Run the pipeline on an available Jenkins agent
     agent any
+
+    // Define deployment variables
+    environment {
+        IMAGE_NAME = 'devops-app:2.0'
+        CONTAINER_NAME = 'devops-container'
+        HOST_PORT = '8081'
+    }
 
     stages {
 
-        // Stage 1: Install project dependencies
-        stage('Install Dependencies') {
+        // Stage 1: Retrieve source code from GitHub
+        stage('Checkout') {
             steps {
-
-                echo 'Installing project dependencies...'
-
-                sh 'npm ci'
-
+                echo 'Retrieving project from GitHub...'
+                checkout scm
             }
         }
 
-        // Stage 2: Run unit tests
-        stage('Unit Testing') {
+        // Stage 2: Build the Docker image
+        stage('Build') {
             steps {
-
-                echo 'Running unit tests...'
-
-                sh 'npm run test:unit'
-
+                echo 'Building Docker image...'
+                bat 'docker build -t %IMAGE_NAME% .'
             }
         }
 
-        // Stage 3: Run integration tests
-        stage('Integration Testing') {
+        // Stage 3: Check the HTML file
+        stage('Test') {
             steps {
-
-                echo 'Running integration tests...'
-
-                sh 'npm run test:integration'
-
+                echo 'Checking index.html...'
+                bat 'findstr /C:"Hello World from Jenkins!" index.html'
             }
         }
 
-        // Stage 4: Static Application Security Testing
-        stage('SAST Security Scan') {
+        // Stage 4: Deploy the application
+        stage('Deploy') {
             steps {
+                echo 'Deploying application to the target host...'
 
-                echo 'Scanning source code for security vulnerabilities...'
+                // Remove the previous container if it exists
+                bat 'docker rm -f %CONTAINER_NAME% 2>NUL || exit /b 0'
 
-                sh '''
-                docker run --rm \
-                -v "$WORKSPACE:/src" \
-                semgrep/semgrep \
-                semgrep scan --config p/security-audit --error /src
-                '''
+                // Run the new container
+                bat 'docker run -d -p %HOST_PORT%:80 --name %CONTAINER_NAME% %IMAGE_NAME%'
 
-            }
-        }
-
-        // Stage 5: Testing and security summary
-        stage('Pipeline Summary') {
-            steps {
-
-                echo 'Unit tests, integration tests and SAST completed successfully!'
-
+                echo 'Deployment completed!'
             }
         }
 
     }
 
     post {
-
         success {
-            echo 'SUCCESS: All tests and security scans passed!'
+            echo 'Deployment successful!'
+            echo 'Open http://localhost:8081 to view the application.'
         }
 
         failure {
-            echo 'FAILURE: Tests or security scanning detected a problem!'
+            echo 'Deployment failed. Check the Jenkins Console Output.'
         }
 
         always {
             echo 'Jenkins pipeline execution completed.'
         }
-
     }
-
 }
-
